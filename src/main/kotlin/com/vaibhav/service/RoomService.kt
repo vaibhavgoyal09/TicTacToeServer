@@ -3,12 +3,13 @@ package com.vaibhav.service
 import com.vaibhav.SocketConnection
 import com.vaibhav.model.Room
 import com.vaibhav.model.request.CreateRoomRequest
+import com.vaibhav.model.response.BasicApiResponse
 import com.vaibhav.model.response.RoomResponse
 import com.vaibhav.util.ResultHelper
 
 class RoomService(private val socketConnection: SocketConnection) {
 
-    fun createRoom(request: CreateRoomRequest?): ResultHelper<Unit> {
+    fun createRoom(request: CreateRoomRequest?): ResultHelper<BasicApiResponse> {
 
         if (request == null) {
             return ResultHelper.Failure("Create room request is null")
@@ -17,16 +18,16 @@ class RoomService(private val socketConnection: SocketConnection) {
         val roomName = request.roomName
 
         if (socketConnection.rooms[roomName] != null) {
-            return ResultHelper.Failure("Room with this name already exists")
+            return ResultHelper.Success(BasicApiResponse(message = "Room with this name already exists"))
         }
 
         val room = Room(name = roomName)
         socketConnection.rooms[roomName] = room
 
-        return ResultHelper.Success(Unit)
+        return ResultHelper.Success(BasicApiResponse(isSuccessful = true))
     }
 
-    fun joinRoom(userName: String?, roomName: String?): ResultHelper<Unit> {
+    fun joinRoom(userName: String?, roomName: String?): ResultHelper<BasicApiResponse> {
 
         when {
             userName == null && roomName == null -> {
@@ -44,15 +45,15 @@ class RoomService(private val socketConnection: SocketConnection) {
 
         return when {
             room == null -> {
-               ResultHelper.Failure("Room not found")
+                ResultHelper.Success(BasicApiResponse(message = "Room not found"))
             }
             room.containsPlayer(userName!!) -> {
-                ResultHelper.Failure("A Player with this name has already joined")
+                ResultHelper.Success(BasicApiResponse(message = "A Player with this name has already joined"))
             }
             room.players.size >= 2 -> {
-                ResultHelper.Failure("Room already full")
+                ResultHelper.Success(BasicApiResponse(message = "Room already full"))
             }
-            else -> ResultHelper.Success(Unit)
+            else -> ResultHelper.Success(BasicApiResponse(isSuccessful = true))
         }
     }
 

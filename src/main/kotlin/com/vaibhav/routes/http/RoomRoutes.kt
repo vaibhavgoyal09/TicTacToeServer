@@ -37,7 +37,8 @@ fun Route.roomRoutes(
         when (val result = roomService.createRoom(createRoomRequest)) {
             is ResultHelper.Success -> {
                 call.respond(
-                    HttpStatusCode.OK
+                    HttpStatusCode.OK,
+                    result.data!!
                 )
             }
             is ResultHelper.Failure -> {
@@ -68,7 +69,8 @@ fun Route.roomRoutes(
         when (val result = roomService.joinRoom(userName, roomName)) {
             is ResultHelper.Success -> {
                 call.respond(
-                    HttpStatusCode.OK
+                    HttpStatusCode.OK,
+                    result.data!!
                 )
             }
             is ResultHelper.Failure -> {
