@@ -10,8 +10,8 @@ fun main() {
 
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         configureDI()
-        configureRouting()
         configureSockets()
+        configureRouting()
         configureSerialization()
         configureSession()
     }.start(wait = true)

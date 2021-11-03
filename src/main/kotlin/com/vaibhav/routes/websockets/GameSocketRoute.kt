@@ -22,27 +22,25 @@ import kotlinx.serialization.json.jsonObject
 fun Route.gameSocketRoute(
     connection: SocketConnection
 ) {
-    route("/v1/game") {
-        standardWebSocket { socket, clientId, frameTextReceived, payload ->
-            when (payload) {
-                is JoinRoom -> {
-                    val room = connection.rooms[payload.roomName]
-                    if (room == null) {
-                        val gameError = GameError(GameError.TYPE_ROOM_NOT_FOUND)
-                        socket.send(Frame.Text(Json.encodeToString(gameError)))
-                        return@standardWebSocket
-                    }
-                    val player = Player(
-                        payload.userName,
-                        socket,
-                        payload.clientId
-                    )
-                    if (room.containsPlayer(player.userName)) {
-                        val playerInRoom = room.players.find { it.clientId == clientId }
-                        playerInRoom?.socket = socket
-                    } else {
+    standardWebSocket { socket, clientId, frameTextReceived, payload ->
+        when (payload) {
+            is JoinRoom -> {
+                val room = connection.rooms[payload.roomName]
+                if (room == null) {
+                    val gameError = GameError(GameError.TYPE_ROOM_NOT_FOUND)
+                    socket.send(Frame.Text(Json.encodeToString(gameError)))
+                    return@standardWebSocket
+                }
+                val player = Player(
+                    payload.userName,
+                    socket,
+                    payload.clientId
+                )
+                if (room.containsPlayer(player.userName)) {
+                    val playerInRoom = room.players.find { it.clientId == clientId }
+                    playerInRoom?.socket = socket
+                } else {
 
-                    }
                 }
             }
         }
@@ -57,7 +55,7 @@ fun Route.standardWebSocket(
         payload: BaseModel
     ) -> Unit
 ) {
-    webSocket {
+    webSocket(path = "/v1/game") {
         val session = call.sessions.get<TicTacToeGameSession>() ?: kotlin.run {
             close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "No session."))
             return@webSocket
