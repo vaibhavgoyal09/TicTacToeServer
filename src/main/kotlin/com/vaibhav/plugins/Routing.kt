@@ -1,6 +1,8 @@
 package com.vaibhav.plugins
 
+import com.vaibhav.SocketConnection
 import com.vaibhav.routes.http.roomRoutes
+import com.vaibhav.routes.websockets.gameSocketRoute
 import com.vaibhav.service.RoomService
 import io.ktor.application.*
 import io.ktor.locations.*
@@ -12,8 +14,10 @@ fun Application.configureRouting() {
     }
 
     val roomService by inject<RoomService>()
+    val socketConnection by inject<SocketConnection>()
 
     routing {
         roomRoutes(roomService)
+        gameSocketRoute(socketConnection)
     }
 }

@@ -13,5 +13,6 @@ fun main() {
         configureRouting()
         configureSockets()
         configureSerialization()
+        configureSession()
     }.start(wait = true)
 }
