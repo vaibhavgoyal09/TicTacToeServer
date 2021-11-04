@@ -36,11 +36,12 @@ fun Route.gameSocketRoute(
                     socket,
                     payload.clientId
                 )
+                connection.playerJoined(player)
                 if (room.containsPlayer(player.userName)) {
                     val playerInRoom = room.players.find { it.clientId == clientId }
                     playerInRoom?.socket = socket
                 } else {
-
+                    room.addPlayer(player)
                 }
             }
         }
