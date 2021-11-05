@@ -1,9 +1,7 @@
 package com.vaibhav.model.ws
 
 import com.vaibhav.util.Constants.TYPE_PLAYER_EVENT
-import kotlinx.serialization.Serializable
 
-@Serializable
 data class PlayerEvents(
     val playerClientId: String,
     val eventType: Int

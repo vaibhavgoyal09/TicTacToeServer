@@ -1,14 +1,12 @@
 package com.vaibhav.model
 
+import com.vaibhav.gson
 import com.vaibhav.model.ws.PlayerEvents
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.isActive
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
-@OptIn(DelicateCoroutinesApi::class, ExperimentalSerializationApi::class)
+@OptIn(DelicateCoroutinesApi::class)
 class Room(
     val name: String,
     var players: List<Player> = listOf()
@@ -46,7 +44,7 @@ class Room(
         }
 
         val playerEvent = PlayerEvents(player.clientId, PlayerEvents.TYPE_PLAYER_JOINED)
-        broadcastToAllExcept(Json.encodeToString(playerEvent), player.clientId)
+        broadcastToAllExcept(gson.toJson(playerEvent), player.clientId)
     }
 
     suspend fun broadcastToAllExcept(message: String, clientId: String) {

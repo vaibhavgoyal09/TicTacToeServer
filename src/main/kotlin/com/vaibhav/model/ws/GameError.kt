@@ -1,8 +1,5 @@
 package com.vaibhav.model.ws
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class GameError(
     val errorType: Int
 ) {

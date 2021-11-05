@@ -1,13 +1,13 @@
 package com.vaibhav.service
 
-import com.vaibhav.SocketConnection
 import com.vaibhav.model.Room
 import com.vaibhav.model.request.CreateRoomRequest
 import com.vaibhav.model.response.BasicApiResponse
 import com.vaibhav.model.response.RoomResponse
+import com.vaibhav.socketConnection
 import com.vaibhav.util.ResultHelper
 
-class RoomService(private val socketConnection: SocketConnection) {
+class RoomService() {
 
     fun createRoom(request: CreateRoomRequest?): ResultHelper<BasicApiResponse> {
 

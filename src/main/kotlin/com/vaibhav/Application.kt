@@ -1,8 +1,12 @@
 package com.vaibhav
 
+import com.google.gson.Gson
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import com.vaibhav.plugins.*
+
+val gson = Gson()
+val socketConnection = SocketConnection()
 
 fun main() {
 
