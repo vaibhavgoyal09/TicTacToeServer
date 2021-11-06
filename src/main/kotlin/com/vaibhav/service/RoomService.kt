@@ -7,7 +7,7 @@ import com.vaibhav.model.response.RoomResponse
 import com.vaibhav.socketConnection
 import com.vaibhav.util.ResultHelper
 
-class RoomService() {
+class RoomService {
 
     fun createRoom(request: CreateRoomRequest?): ResultHelper<BasicApiResponse> {
 
