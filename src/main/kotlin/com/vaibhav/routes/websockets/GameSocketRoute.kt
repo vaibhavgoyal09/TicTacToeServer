@@ -57,6 +57,8 @@ fun Route.standardWebSocket(
             return@webSocket
         }
 
+        println("web socket connection opened")
+
         try {
             incoming.consumeEach { frame ->
                 if (frame is Frame.Text) {
