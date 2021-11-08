@@ -16,27 +16,28 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
 
 fun Route.gameSocketRoute() {
-
-    standardWebSocket { socket, clientId, frameTextReceived, payload ->
-        when (payload) {
-            is JoinRoom -> {
-                val room = socketConnection.rooms[payload.roomName]
-                if (room == null) {
-                    val gameError = GameError(GameError.TYPE_ROOM_NOT_FOUND)
-                    socket.send(Frame.Text(gson.toJson(gameError)))
-                    return@standardWebSocket
-                }
-                val player = Player(
-                    payload.userName,
-                    socket,
-                    payload.clientId
-                )
-                socketConnection.playerJoined(player)
-                if (room.containsPlayer(player.userName)) {
-                    val playerInRoom = room.players.find { it.clientId == clientId }
-                    playerInRoom?.socket = socket
-                } else {
-                    room.addPlayer(player)
+    route("/v1/game") {
+        standardWebSocket { socket, clientId, frameTextReceived, payload ->
+            when (payload) {
+                is JoinRoom -> {
+                    val room = socketConnection.rooms[payload.roomName]
+                    if (room == null) {
+                        val gameError = GameError(GameError.TYPE_ROOM_NOT_FOUND)
+                        socket.send(Frame.Text(gson.toJson(gameError)))
+                        return@standardWebSocket
+                    }
+                    val player = Player(
+                        payload.userName,
+                        socket,
+                        payload.clientId
+                    )
+                    socketConnection.playerJoined(player)
+                    if (room.containsPlayer(player.userName)) {
+                        val playerInRoom = room.players.find { it.clientId == clientId }
+                        playerInRoom?.socket = socket
+                    } else {
+                        room.addPlayer(player)
+                    }
                 }
             }
         }
@@ -51,7 +52,7 @@ fun Route.standardWebSocket(
         payload: BaseModel
     ) -> Unit
 ) {
-    webSocket(path = "/v1/game") {
+    webSocket {
         val session = call.sessions.get<TicTacToeGameSession>() ?: kotlin.run {
             close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "No session."))
             return@webSocket
