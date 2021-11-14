@@ -10,9 +10,7 @@ import com.vaibhav.model.ws.TurnChange
 import com.vaibhav.util.ResultHelper
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(DelicateCoroutinesApi::class)
 class Room(
@@ -52,7 +50,7 @@ class Room(
         return players.find { it.userName == userName } != null
     }
 
-    fun handleMoveReceivedFromPlayer(position: Int, clientId: String): ResultHelper<Boolean> {
+    suspend fun handleMoveReceivedFromPlayer(position: Int, clientId: String): ResultHelper<Boolean> {
         if (movesCounter >= 9) {
             return ResultHelper.Success(false)
         }
@@ -76,9 +74,7 @@ class Room(
         playerWithTurn = players.find { it.clientId != clientId }
 
         val turnChange = TurnChange(playerWithTurn?.clientId!!, position)
-        GlobalScope.launch {
-            broadcastToAll(gson.toJson(turnChange))
-        }
+        broadcastToAll(gson.toJson(turnChange))
 
         var isAnyoneWin = false
 
@@ -95,19 +91,14 @@ class Room(
                     val p = players.find { it.symbol == SYMBOL_O }
                     p?.userName
                 }
-
-                GlobalScope.launch {
-                    val announcement = Announcement(Announcement.TYPE_PLAYER_WON, winnerPlayerUserName)
-                    broadcastToAll(gson.toJson(announcement))
-                }
+                val announcement = Announcement(Announcement.TYPE_PLAYER_WON, winnerPlayerUserName)
+                broadcastToAll(gson.toJson(announcement))
             }
         }
 
         if (movesCounter == 9 && !isAnyoneWin) {
             val announcement = Announcement(Announcement.TYPE_MATCH_DRAW)
-            GlobalScope.launch {
-                broadcastToAll(gson.toJson(announcement))
-            }
+            broadcastToAll(gson.toJson(announcement))
         }
 
         return ResultHelper.Success(true)

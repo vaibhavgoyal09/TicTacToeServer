@@ -3,6 +3,7 @@ package com.vaibhav.service
 import com.vaibhav.model.Room
 import com.vaibhav.model.request.CreateRoomRequest
 import com.vaibhav.model.response.BasicApiResponse
+import com.vaibhav.model.response.JoinRoomResponse
 import com.vaibhav.model.response.RoomResponse
 import com.vaibhav.socketConnection
 import com.vaibhav.util.ResultHelper
@@ -27,7 +28,7 @@ class RoomService {
         return ResultHelper.Success(BasicApiResponse(isSuccessful = true))
     }
 
-    fun joinRoom(userName: String?, roomName: String?): ResultHelper<BasicApiResponse> {
+    fun joinRoom(userName: String?, roomName: String?): ResultHelper<JoinRoomResponse> {
 
         when {
             userName == null && roomName == null -> {
@@ -45,15 +46,23 @@ class RoomService {
 
         return when {
             room == null -> {
-                ResultHelper.Success(BasicApiResponse(message = "Room not found"))
+                ResultHelper.Success(JoinRoomResponse(errorMessage = "Room not found"))
             }
             room.containsPlayer(userName!!) -> {
-                ResultHelper.Success(BasicApiResponse(message = "A Player with this name has already joined"))
+                ResultHelper.Success(JoinRoomResponse(errorMessage = "A Player with this name has already joined"))
             }
             room.players.size >= 2 -> {
-                ResultHelper.Success(BasicApiResponse(message = "Room already full"))
+                ResultHelper.Success(JoinRoomResponse(errorMessage = "Room already full"))
             }
-            else -> ResultHelper.Success(BasicApiResponse(isSuccessful = true))
+            else -> {
+                val existingPlayer = room.players.firstOrNull()
+                ResultHelper.Success(
+                    JoinRoomResponse(
+                        isSuccess = true,
+                        existingPlayerUserName = existingPlayer?.userName
+                    )
+                )
+            }
         }
     }
 
