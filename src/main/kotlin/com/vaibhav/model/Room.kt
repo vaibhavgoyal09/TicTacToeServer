@@ -1,10 +1,17 @@
 package com.vaibhav.model
 
 import com.vaibhav.gson
-import com.vaibhav.model.ws.PlayerEvents
+import com.vaibhav.model.Player.Companion.SYMBOL_O
+import com.vaibhav.model.Player.Companion.SYMBOL_X
+import com.vaibhav.model.ws.GamePhaseChange
+import com.vaibhav.model.ws.StartGame
+import com.vaibhav.model.ws.TurnChange
+import com.vaibhav.util.ResultHelper
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(DelicateCoroutinesApi::class)
 class Room(
@@ -12,8 +19,10 @@ class Room(
     var players: List<Player> = listOf()
 ) {
 
-    private var phaseChangedListener: ((Phase) -> Unit)? = null
-    var phase = Phase.WAITING_FOR_PLAYERS
+    private var playerWithTurn: Player? = null
+
+    private var phaseChangedListener: ((GamePhase) -> Unit)? = null
+    var phase = GamePhase.WAITING_FOR_PLAYERS
         set(value) {
             synchronized(field) {
                 field = value
@@ -23,8 +32,77 @@ class Room(
             }
         }
 
+    private var movesCounter: Int = 0
+
+    private val gameBoardPositions: Array<Int> = arrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    private val winPositions: Array<IntArray> = arrayOf(
+        intArrayOf(0, 1, 2),
+        intArrayOf(3, 4, 5),
+        intArrayOf(6, 7, 8),
+        intArrayOf(0, 3, 6),
+        intArrayOf(1, 4, 7),
+        intArrayOf(2, 5, 8),
+        intArrayOf(0, 4, 8),
+        intArrayOf(2, 4, 6)
+    )
+
     fun containsPlayer(userName: String): Boolean {
         return players.find { it.userName == userName } != null
+    }
+
+    fun validateAndRecognizeMove(position: Int, clientId: String): ResultHelper<Boolean> {
+        if (movesCounter >= 9) {
+            return ResultHelper.Success(false)
+        }
+        if (position > 9) {
+            return ResultHelper.Failure("Invalid move")
+        }
+        if (phase != GamePhase.GAME_RUNNING) {
+            return ResultHelper.Failure("Invalid Phase")
+        }
+        val player =
+            players.find { it.clientId == clientId } ?: return ResultHelper.Failure("Player not found")
+
+        if (player == playerWithTurn) {
+            return ResultHelper.Success(false)
+        }
+        if (gameBoardPositions[position] != 0) {
+            return ResultHelper.Success(false)
+        }
+        movesCounter++
+        gameBoardPositions[position] = playerWithTurn?.playerSymbol!!
+        playerWithTurn = players.find { it.clientId != clientId }
+
+        val turnChange = TurnChange(playerWithTurn?.clientId!!, position)
+        GlobalScope.launch {
+            broadcastToAll(gson.toJson(turnChange))
+        }
+
+        var winnerPlayerClientId: String? = null
+
+        var flag = 0
+        for (winPosition in winPositions) {
+            if (gameBoardPositions[winPosition[0]] == gameBoardPositions[winPosition[1]] &&
+                gameBoardPositions[winPosition[1]] == gameBoardPositions[winPosition[2]] &&
+                gameBoardPositions[winPosition[0]] != 0
+            ) {
+                flag = 1
+                winnerPlayerClientId = if (gameBoardPositions[winPosition[0]] == SYMBOL_X) {
+                    val p = players.find { it.playerSymbol == SYMBOL_X }
+                    p?.clientId
+                } else {
+                    val p = players.find { it.playerSymbol == SYMBOL_O }
+                    p?.clientId
+                }
+            }
+        }
+
+        if (movesCounter == 9 && flag == 0) {
+            // Match draw
+        }
+
+        return ResultHelper.Success(true)
     }
 
     suspend fun addPlayer(player: Player) {
@@ -37,27 +115,55 @@ class Room(
         players = tempList.toList()
 
         if (players.size == 1) {
-            phase = Phase.WAITING_FOR_PLAYERS
-        } else if (players.size == 2 && phase == Phase.WAITING_FOR_PLAYERS) {
-            phase = Phase.NEW_ROUND
+            phase = GamePhase.WAITING_FOR_PLAYERS
+
+            val gamePhaseChange = GamePhaseChange(GamePhase.WAITING_FOR_PLAYERS, System.currentTimeMillis())
+            broadcastMessageTo(gson.toJson(gamePhaseChange), player.clientId)
+
+        } else if (players.size == 2 && phase == GamePhase.WAITING_FOR_PLAYERS) {
+            phase = GamePhase.WAITING_FOR_START
             players = players.shuffled()
-        }
 
-        val playerEvent = PlayerEvents(player.clientId, PlayerEvents.TYPE_PLAYER_JOINED)
-        broadcastToAllExcept(gson.toJson(playerEvent), player.clientId)
+            val playerWithSymbolX = players.first()
+            val playerWithSymbolO = players.last()
+
+            val xSymbol = SYMBOL_X
+            val oSymbol = SYMBOL_O
+
+            playerWithSymbolO.playerSymbol = oSymbol
+            playerWithSymbolO.playerSymbol = xSymbol
+
+            val phaseChange = GamePhaseChange(phase = phase, System.currentTimeMillis())
+            broadcastToAll(gson.toJson(phaseChange))
+
+            delay(DELAY_GAME_START)
+
+            val startGame = StartGame(
+                playerWithSymbolX.clientId, playerWithSymbolO.clientId
+            )
+            broadcastToAll(gson.toJson(startGame))
+        }
     }
 
-    suspend fun broadcastToAllExcept(message: String, clientId: String) {
+    suspend fun broadcastMessageTo(message: String, clientId: String) {
+        val player = players.find { it.clientId == clientId }
+        player?.socket?.send(Frame.Text(message))
+    }
+
+    suspend fun broadcastToAll(message: String) {
         players.forEach {
-            if (it.clientId != clientId && it.socket.isActive) {
-                it.socket.send(Frame.Text(message))
-            }
+            it.socket.send(Frame.Text(message))
         }
     }
 
-    enum class Phase {
+    companion object {
+        const val DELAY_GAME_START = 3000L
+    }
+
+    enum class GamePhase {
         WAITING_FOR_PLAYERS,
         NEW_ROUND,
+        WAITING_FOR_START,
         GAME_RUNNING
     }
 }

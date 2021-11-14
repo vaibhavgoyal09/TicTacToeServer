@@ -3,11 +3,11 @@ package com.vaibhav.routes.websockets
 import com.google.gson.JsonParser
 import com.vaibhav.gson
 import com.vaibhav.model.Player
-import com.vaibhav.model.ws.BaseModel
-import com.vaibhav.model.ws.GameError
-import com.vaibhav.model.ws.JoinRoom
+import com.vaibhav.model.ws.*
 import com.vaibhav.session.TicTacToeGameSession
 import com.vaibhav.socketConnection
+import com.vaibhav.util.Constants.TYPE_DISCONNECT_REQUEST
+import com.vaibhav.util.Constants.TYPE_GAME_MOVE
 import com.vaibhav.util.Constants.TYPE_JOIN_ROOM
 import io.ktor.http.cio.websocket.*
 import io.ktor.routing.*
@@ -22,7 +22,7 @@ fun Route.gameSocketRoute() {
                 is JoinRoom -> {
                     val room = socketConnection.rooms[payload.roomName]
                     if (room == null) {
-                        val gameError = GameError(GameError.TYPE_ROOM_NOT_FOUND)
+                        val gameError = GameError(errorType = GameError.TYPE_ROOM_NOT_FOUND)
                         socket.send(Frame.Text(gson.toJson(gameError)))
                         return@standardWebSocket
                     }
@@ -38,6 +38,13 @@ fun Route.gameSocketRoute() {
                     } else {
                         room.addPlayer(player)
                     }
+                }
+                is GameMove -> {
+                    val room = socketConnection.getRoomWithClientId(clientId) ?: return@standardWebSocket
+
+                }
+                is DisconnectRequest -> {
+                    socketConnection.playerLeft(clientId)
                 }
             }
         }
@@ -58,8 +65,6 @@ fun Route.standardWebSocket(
             return@webSocket
         }
 
-        println("web socket connection opened")
-
         try {
             incoming.consumeEach { frame ->
                 if (frame is Frame.Text) {
@@ -67,9 +72,11 @@ fun Route.standardWebSocket(
                     val jsonObject = JsonParser.parseString(frameTextReceived).asJsonObject
                     val type = when (jsonObject.get("type").asString) {
                         TYPE_JOIN_ROOM -> JoinRoom::class.java
+                        TYPE_GAME_MOVE -> GameMove::class.java
+                        TYPE_DISCONNECT_REQUEST -> DisconnectRequest::class.java
                         else -> BaseModel::class.java
                     }
-                    val payload = gson.fromJson(jsonObject, type)
+                    val payload = gson.fromJson(frameTextReceived, type)
                     handleFrame(this, session.clientId, frameTextReceived, payload)
                 }
             }
