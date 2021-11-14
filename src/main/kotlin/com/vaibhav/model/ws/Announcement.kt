@@ -4,7 +4,7 @@ import com.vaibhav.util.Constants.TYPE_ANNOUNCEMENT
 
 data class Announcement(
     val announcementType: Int,
-    val playerClientId: String
+    val playerUserName: String? = null
 ): BaseModel(TYPE_ANNOUNCEMENT) {
 
     companion object {

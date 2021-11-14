@@ -3,6 +3,7 @@ package com.vaibhav.model
 import com.vaibhav.gson
 import com.vaibhav.model.Player.Companion.SYMBOL_O
 import com.vaibhav.model.Player.Companion.SYMBOL_X
+import com.vaibhav.model.ws.Announcement
 import com.vaibhav.model.ws.GamePhaseChange
 import com.vaibhav.model.ws.StartGame
 import com.vaibhav.model.ws.TurnChange
@@ -22,7 +23,7 @@ class Room(
     private var playerWithTurn: Player? = null
 
     private var phaseChangedListener: ((GamePhase) -> Unit)? = null
-    var phase = GamePhase.WAITING_FOR_PLAYERS
+    private var phase = GamePhase.WAITING_FOR_PLAYERS
         set(value) {
             synchronized(field) {
                 field = value
@@ -51,7 +52,7 @@ class Room(
         return players.find { it.userName == userName } != null
     }
 
-    fun validateAndRecognizeMove(position: Int, clientId: String): ResultHelper<Boolean> {
+    fun handleMoveReceivedFromPlayer(position: Int, clientId: String): ResultHelper<Boolean> {
         if (movesCounter >= 9) {
             return ResultHelper.Success(false)
         }
@@ -71,7 +72,7 @@ class Room(
             return ResultHelper.Success(false)
         }
         movesCounter++
-        gameBoardPositions[position] = playerWithTurn?.playerSymbol!!
+        gameBoardPositions[position] = playerWithTurn?.symbol!!
         playerWithTurn = players.find { it.clientId != clientId }
 
         val turnChange = TurnChange(playerWithTurn?.clientId!!, position)
@@ -79,27 +80,34 @@ class Room(
             broadcastToAll(gson.toJson(turnChange))
         }
 
-        var winnerPlayerClientId: String? = null
+        var isAnyoneWin = false
 
-        var flag = 0
         for (winPosition in winPositions) {
             if (gameBoardPositions[winPosition[0]] == gameBoardPositions[winPosition[1]] &&
                 gameBoardPositions[winPosition[1]] == gameBoardPositions[winPosition[2]] &&
                 gameBoardPositions[winPosition[0]] != 0
             ) {
-                flag = 1
-                winnerPlayerClientId = if (gameBoardPositions[winPosition[0]] == SYMBOL_X) {
-                    val p = players.find { it.playerSymbol == SYMBOL_X }
-                    p?.clientId
+                isAnyoneWin = true
+                val winnerPlayerUserName = if (gameBoardPositions[winPosition[0]] == SYMBOL_X) {
+                    val p = players.find { it.symbol == SYMBOL_X }
+                    p?.userName
                 } else {
-                    val p = players.find { it.playerSymbol == SYMBOL_O }
-                    p?.clientId
+                    val p = players.find { it.symbol == SYMBOL_O }
+                    p?.userName
+                }
+
+                GlobalScope.launch {
+                    val announcement = Announcement(Announcement.TYPE_PLAYER_WON, winnerPlayerUserName)
+                    broadcastToAll(gson.toJson(announcement))
                 }
             }
         }
 
-        if (movesCounter == 9 && flag == 0) {
-            // Match draw
+        if (movesCounter == 9 && !isAnyoneWin) {
+            val announcement = Announcement(Announcement.TYPE_MATCH_DRAW)
+            GlobalScope.launch {
+                broadcastToAll(gson.toJson(announcement))
+            }
         }
 
         return ResultHelper.Success(true)
@@ -110,6 +118,10 @@ class Room(
         if (players.size == 2) {
             return
         }
+
+        val announcement = Announcement(Announcement.TYPE_PLAYER_JOINED, player.userName)
+        broadcastToAllExcept(gson.toJson(announcement), player.clientId)
+
         val tempList = players.toMutableList()
         tempList.add(player)
         players = tempList.toList()
@@ -130,8 +142,8 @@ class Room(
             val xSymbol = SYMBOL_X
             val oSymbol = SYMBOL_O
 
-            playerWithSymbolO.playerSymbol = oSymbol
-            playerWithSymbolO.playerSymbol = xSymbol
+            playerWithSymbolO.symbol = oSymbol
+            playerWithSymbolO.symbol = xSymbol
 
             val phaseChange = GamePhaseChange(phase = phase, System.currentTimeMillis())
             broadcastToAll(gson.toJson(phaseChange))
@@ -139,18 +151,26 @@ class Room(
             delay(DELAY_GAME_START)
 
             val startGame = StartGame(
-                playerWithSymbolX.clientId, playerWithSymbolO.clientId
+                playerWithSymbolX.userName, playerWithSymbolO.userName
             )
             broadcastToAll(gson.toJson(startGame))
         }
     }
 
-    suspend fun broadcastMessageTo(message: String, clientId: String) {
+    private suspend fun broadcastMessageTo(message: String, clientId: String) {
         val player = players.find { it.clientId == clientId }
         player?.socket?.send(Frame.Text(message))
     }
 
-    suspend fun broadcastToAll(message: String) {
+    private suspend fun broadcastToAllExcept(message: String, clientId: String) {
+        players.forEach {
+            if (it.clientId != clientId) {
+                it.socket.send(Frame.Text(message))
+            }
+        }
+    }
+
+    private suspend fun broadcastToAll(message: String) {
         players.forEach {
             it.socket.send(Frame.Text(message))
         }

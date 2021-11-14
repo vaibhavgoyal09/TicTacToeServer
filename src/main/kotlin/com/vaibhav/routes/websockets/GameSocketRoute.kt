@@ -9,6 +9,7 @@ import com.vaibhav.socketConnection
 import com.vaibhav.util.Constants.TYPE_DISCONNECT_REQUEST
 import com.vaibhav.util.Constants.TYPE_GAME_MOVE
 import com.vaibhav.util.Constants.TYPE_JOIN_ROOM
+import com.vaibhav.util.ResultHelper
 import io.ktor.http.cio.websocket.*
 import io.ktor.routing.*
 import io.ktor.sessions.*
@@ -17,7 +18,7 @@ import kotlinx.coroutines.channels.consumeEach
 
 fun Route.gameSocketRoute() {
     route("/v1/game") {
-        standardWebSocket { socket, clientId, frameTextReceived, payload ->
+        standardWebSocket { socket, clientId, _, payload ->
             when (payload) {
                 is JoinRoom -> {
                     val room = socketConnection.rooms[payload.roomName]
@@ -41,7 +42,11 @@ fun Route.gameSocketRoute() {
                 }
                 is GameMove -> {
                     val room = socketConnection.getRoomWithClientId(clientId) ?: return@standardWebSocket
+                    val result = room.handleMoveReceivedFromPlayer(payload.position, clientId)
 
+                    if (result is ResultHelper.Failure) {
+                        socket.send(Frame.Text(result.errorMessage!!))
+                    }
                 }
                 is DisconnectRequest -> {
                     socketConnection.playerLeft(clientId)

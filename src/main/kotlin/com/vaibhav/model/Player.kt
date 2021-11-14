@@ -7,7 +7,7 @@ data class Player(
     var socket: WebSocketSession,
     val clientId: String,
     var score: Int = 0,
-    var playerSymbol: Int = NO_SYMBOL
+    var symbol: Int = NO_SYMBOL
 ) {
 
     var isOnline = true
