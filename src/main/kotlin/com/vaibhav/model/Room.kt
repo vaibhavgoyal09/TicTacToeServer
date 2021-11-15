@@ -3,10 +3,7 @@ package com.vaibhav.model
 import com.vaibhav.gson
 import com.vaibhav.model.Player.Companion.SYMBOL_O
 import com.vaibhav.model.Player.Companion.SYMBOL_X
-import com.vaibhav.model.ws.Announcement
-import com.vaibhav.model.ws.GamePhaseChange
-import com.vaibhav.model.ws.StartGame
-import com.vaibhav.model.ws.TurnChange
+import com.vaibhav.model.ws.*
 import com.vaibhav.util.ResultHelper
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -73,8 +70,8 @@ class Room(
         gameBoardPositions[position] = playerWithTurn?.symbol!!
         playerWithTurn = players.find { it.clientId != clientId }
 
-        val turnChange = TurnChange(playerWithTurn?.clientId!!, position)
-        broadcastToAll(gson.toJson(turnChange))
+        val boardChanged = GameBoardStateChange(gameBoardPositions.asList())
+        broadcastToAll(gson.toJson(boardChanged))
 
         var isAnyoneWin = false
 
@@ -84,21 +81,21 @@ class Room(
                 gameBoardPositions[winPosition[0]] != 0
             ) {
                 isAnyoneWin = true
-                val winnerPlayerUserName = if (gameBoardPositions[winPosition[0]] == SYMBOL_X) {
-                    val p = players.find { it.symbol == SYMBOL_X }
-                    p?.userName
-                } else {
-                    val p = players.find { it.symbol == SYMBOL_O }
-                    p?.userName
-                }
-                val announcement = Announcement(Announcement.TYPE_PLAYER_WON, winnerPlayerUserName)
-                broadcastToAll(gson.toJson(announcement))
+                val xPlayer = players.find { it.symbol == SYMBOL_X }!!
+                val oPlayer = players.find { it.symbol == SYMBOL_O }!!
+                val winningPlayer = if (gameBoardPositions[winPosition[0]] == SYMBOL_X) xPlayer else oPlayer
+                val loosingPlayer = if (winningPlayer == xPlayer) oPlayer else xPlayer
+
+                val winResult = GameResult(GameResult.TYPE_GAME_WON)
+                val lostResult = GameResult(GameResult.TYPE_GAME_LOST)
+                broadcastMessageTo(gson.toJson(winResult), winningPlayer.clientId)
+                broadcastMessageTo(gson.toJson(lostResult), loosingPlayer.clientId)
             }
         }
 
         if (movesCounter == 9 && !isAnyoneWin) {
-            val announcement = Announcement(Announcement.TYPE_MATCH_DRAW)
-            broadcastToAll(gson.toJson(announcement))
+            val gameResult = GameResult(GameResult.TYPE_GAME_DRAW)
+            broadcastToAll(gson.toJson(gameResult))
         }
 
         return ResultHelper.Success(true)

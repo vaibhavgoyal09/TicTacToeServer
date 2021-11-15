@@ -10,7 +10,5 @@ data class Announcement(
     companion object {
         const val TYPE_PLAYER_JOINED = 0
         const val TYPE_PLAYER_LEFT = 1
-        const val TYPE_PLAYER_WON = 2
-        const val TYPE_MATCH_DRAW = 3
     }
 }
