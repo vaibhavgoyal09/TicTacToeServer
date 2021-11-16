@@ -12,7 +12,7 @@ fun Application.configureSession() {
 
     intercept(ApplicationCallPipeline.Features) {
         if (call.sessions.get<TicTacToeGameSession>() == null) {
-            val clientId = call.request.queryParameters["clientId"] ?: ""
+            val clientId = call.parameters["clientId"]!!
             call.sessions.set(TicTacToeGameSession(clientId, generateNonce()))
         }
     }
