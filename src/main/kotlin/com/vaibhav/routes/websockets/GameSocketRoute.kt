@@ -9,6 +9,7 @@ import com.vaibhav.socketConnection
 import com.vaibhav.util.Constants.TYPE_DISCONNECT_REQUEST
 import com.vaibhav.util.Constants.TYPE_GAME_MOVE
 import com.vaibhav.util.Constants.TYPE_JOIN_ROOM
+import io.ktor.application.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.routing.*
 import io.ktor.sessions.*
@@ -67,6 +68,7 @@ fun Route.standardWebSocket(
             close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "ClientId is null"))
             return@webSocket
         }
+        println(clientId)
 
         try {
             incoming.consumeEach { frame ->
