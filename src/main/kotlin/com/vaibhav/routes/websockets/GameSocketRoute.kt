@@ -68,7 +68,7 @@ fun Route.standardWebSocket(
             close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "ClientId is null"))
             return@webSocket
         }
-        println(clientId)
+        println("clientId $clientId")
 
         try {
             incoming.consumeEach { frame ->
