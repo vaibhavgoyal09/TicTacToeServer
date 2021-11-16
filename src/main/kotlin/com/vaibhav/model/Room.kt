@@ -134,10 +134,9 @@ class Room(
 
             delay(DELAY_GAME_START)
 
-            val startGame = StartGame(
-                playerWithSymbolX.userName, playerWithSymbolO.userName
-            )
-            broadcastToAll(gson.toJson(startGame))
+            phase = GamePhase.NEW_ROUND
+            val newRound = GamePhaseChange(phase, System.currentTimeMillis())
+            broadcastToAll(gson.toJson(newRound))
             phase = GamePhase.GAME_RUNNING
         }
     }
