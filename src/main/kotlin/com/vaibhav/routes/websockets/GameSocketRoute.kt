@@ -9,7 +9,6 @@ import com.vaibhav.socketConnection
 import com.vaibhav.util.Constants.TYPE_DISCONNECT_REQUEST
 import com.vaibhav.util.Constants.TYPE_GAME_MOVE
 import com.vaibhav.util.Constants.TYPE_JOIN_ROOM
-import com.vaibhav.util.ResultHelper
 import io.ktor.http.cio.websocket.*
 import io.ktor.routing.*
 import io.ktor.sessions.*
@@ -41,8 +40,11 @@ fun Route.gameSocketRoute() {
                     }
                 }
                 is GameMove -> {
-                    val room = socketConnection.getRoomWithClientId(clientId) ?: return@standardWebSocket
-                    room.handleMoveReceivedFromPlayer(payload.position, clientId)
+                    val room = socketConnection.getRoomWithClientId(clientId)
+                    if (room == null) {
+                        println("Room was null")
+                    }
+                    room?.handleMoveReceivedFromPlayer(payload.position, clientId)
                 }
                 is DisconnectRequest -> {
                     socketConnection.playerLeft(clientId)
@@ -61,8 +63,8 @@ fun Route.standardWebSocket(
     ) -> Unit
 ) {
     webSocket {
-        val session = call.sessions.get<TicTacToeGameSession>() ?: kotlin.run {
-            close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "No session."))
+        val clientId = call.sessions.get<TicTacToeGameSession>()?.clientId ?: kotlin.run {
+            close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "ClientId is null"))
             return@webSocket
         }
 
@@ -70,7 +72,6 @@ fun Route.standardWebSocket(
             incoming.consumeEach { frame ->
                 if (frame is Frame.Text) {
                     val frameTextReceived = frame.readText()
-                    println(frameTextReceived)
                     val jsonObject = JsonParser.parseString(frameTextReceived).asJsonObject
                     val type = when (jsonObject.get("type").asString) {
                         TYPE_JOIN_ROOM -> JoinRoom::class.java
@@ -79,7 +80,7 @@ fun Route.standardWebSocket(
                         else -> BaseModel::class.java
                     }
                     val payload = gson.fromJson(frameTextReceived, type)
-                    handleFrame(this, session.clientId, frameTextReceived, payload)
+                    handleFrame(this, clientId, frameTextReceived, payload)
                 }
             }
         } catch (e: Exception) {

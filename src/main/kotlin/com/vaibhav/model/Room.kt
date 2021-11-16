@@ -50,7 +50,7 @@ class Room(
         if (movesCounter >= 9) {
             return
         }
-        if (position > 9) {
+        if (position > 8) {
             val gameError = GameError(errorType = GameError.TYPE_INVALID_MOVE)
             broadcastMessageTo(gson.toJson(gameError), clientId)
             return
@@ -58,19 +58,16 @@ class Room(
         if (phase != GamePhase.GAME_RUNNING) {
             return
         }
-        val player = players.find { it.clientId == clientId } ?: return
-
-        if (player != playerWithTurn) {
+        if (gameBoardPositions[position] != 0) {
             return
         }
-        if (gameBoardPositions[position] != 0) {
+        val player = players.find { it.clientId == clientId }
+        if (player != playerWithTurn) {
             return
         }
         movesCounter++
         gameBoardPositions[position] = playerWithTurn?.symbol!!
         playerWithTurn = players.find { it.symbol != playerWithTurn?.symbol }
-
-        println(gameBoardPositions.asList())
 
         val boardChanged = GameBoardStateChange(gameBoardPositions.asList())
         broadcastToAll(gson.toJson(boardChanged))
@@ -127,11 +124,8 @@ class Room(
             val playerWithSymbolX = players.first()
             val playerWithSymbolO = players.last()
 
-            val xSymbol = SYMBOL_X
-            val oSymbol = SYMBOL_O
-
-            playerWithSymbolO.symbol = oSymbol
-            playerWithSymbolO.symbol = xSymbol
+            playerWithSymbolX.symbol = SYMBOL_X
+            playerWithSymbolO.symbol = SYMBOL_O
 
             playerWithTurn = playerWithSymbolX
 
