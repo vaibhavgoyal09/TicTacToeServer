@@ -68,7 +68,7 @@ class Room(
         }
         movesCounter++
         gameBoardPositions[position] = playerWithTurn?.symbol!!
-        playerWithTurn = players.find { it.clientId != clientId }
+        playerWithTurn = players.find { it.symbol != playerWithTurn?.symbol }
 
         val boardChanged = GameBoardStateChange(gameBoardPositions.asList())
         broadcastToAll(gson.toJson(boardChanged))
@@ -132,6 +132,8 @@ class Room(
 
             playerWithSymbolO.symbol = oSymbol
             playerWithSymbolO.symbol = xSymbol
+
+            playerWithTurn = playerWithSymbolX
 
             val phaseChange = GamePhaseChange(phase = phase, System.currentTimeMillis())
             broadcastToAll(gson.toJson(phaseChange))
