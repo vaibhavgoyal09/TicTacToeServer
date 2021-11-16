@@ -4,7 +4,6 @@ import com.vaibhav.gson
 import com.vaibhav.model.Player.Companion.SYMBOL_O
 import com.vaibhav.model.Player.Companion.SYMBOL_X
 import com.vaibhav.model.ws.*
-import com.vaibhav.util.ResultHelper
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.delay
@@ -47,24 +46,25 @@ class Room(
         return players.find { it.userName == userName } != null
     }
 
-    suspend fun handleMoveReceivedFromPlayer(position: Int, clientId: String): ResultHelper<Boolean> {
+    suspend fun handleMoveReceivedFromPlayer(position: Int, clientId: String) {
         if (movesCounter >= 9) {
-            return ResultHelper.Success(false)
+            return
         }
         if (position > 9) {
-            return ResultHelper.Failure("Invalid move")
+            val gameError = GameError(errorType = GameError.TYPE_INVALID_MOVE)
+            broadcastMessageTo(gson.toJson(gameError), clientId)
+            return
         }
         if (phase != GamePhase.GAME_RUNNING) {
-            return ResultHelper.Failure("Invalid Phase")
+            return
         }
-        val player =
-            players.find { it.clientId == clientId } ?: return ResultHelper.Failure("Player not found")
+        val player = players.find { it.clientId == clientId } ?: return
 
-        if (player == playerWithTurn) {
-            return ResultHelper.Success(false)
+        if (player != playerWithTurn) {
+            return
         }
         if (gameBoardPositions[position] != 0) {
-            return ResultHelper.Success(false)
+            return
         }
         movesCounter++
         gameBoardPositions[position] = playerWithTurn?.symbol!!
@@ -97,8 +97,6 @@ class Room(
             val gameResult = GameResult(GameResult.TYPE_GAME_DRAW)
             broadcastToAll(gson.toJson(gameResult))
         }
-
-        return ResultHelper.Success(true)
     }
 
     suspend fun addPlayer(player: Player) {
@@ -144,6 +142,7 @@ class Room(
                 playerWithSymbolX.userName, playerWithSymbolO.userName
             )
             broadcastToAll(gson.toJson(startGame))
+            phase = GamePhase.GAME_RUNNING
         }
     }
 
