@@ -70,6 +70,8 @@ class Room(
         gameBoardPositions[position] = playerWithTurn?.symbol!!
         playerWithTurn = players.find { it.symbol != playerWithTurn?.symbol }
 
+        println(gameBoardPositions.asList())
+
         val boardChanged = GameBoardStateChange(gameBoardPositions.asList())
         broadcastToAll(gson.toJson(boardChanged))
 

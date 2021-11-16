@@ -70,6 +70,7 @@ fun Route.standardWebSocket(
             incoming.consumeEach { frame ->
                 if (frame is Frame.Text) {
                     val frameTextReceived = frame.readText()
+                    println(frameTextReceived)
                     val jsonObject = JsonParser.parseString(frameTextReceived).asJsonObject
                     val type = when (jsonObject.get("type").asString) {
                         TYPE_JOIN_ROOM -> JoinRoom::class.java
