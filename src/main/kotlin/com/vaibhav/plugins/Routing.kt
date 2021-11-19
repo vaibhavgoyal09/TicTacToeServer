@@ -6,14 +6,13 @@ import com.vaibhav.service.RoomService
 import io.ktor.application.*
 import io.ktor.locations.*
 import io.ktor.routing.*
-import org.koin.ktor.ext.inject
 
 fun Application.configureRouting() {
 
     install(Locations) {
     }
 
-    val roomService by inject<RoomService>()
+    val roomService = RoomService()
 
     routing {
         roomRoutes(roomService)

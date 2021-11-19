@@ -1,4 +1,4 @@
-package com.vaibhav.session
+package com.vaibhav.model.session
 
 data class TicTacToeGameSession(
     val clientId: String,

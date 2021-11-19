@@ -1,6 +1,6 @@
 package com.vaibhav.plugins
 
-import com.vaibhav.session.TicTacToeGameSession
+import com.vaibhav.model.session.TicTacToeGameSession
 import io.ktor.application.*
 import io.ktor.sessions.*
 import io.ktor.util.*

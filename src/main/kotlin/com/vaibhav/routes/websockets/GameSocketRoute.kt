@@ -4,7 +4,7 @@ import com.google.gson.JsonParser
 import com.vaibhav.gson
 import com.vaibhav.model.Player
 import com.vaibhav.model.ws.*
-import com.vaibhav.session.TicTacToeGameSession
+import com.vaibhav.model.session.TicTacToeGameSession
 import com.vaibhav.socketConnection
 import com.vaibhav.util.Constants.TYPE_DISCONNECT_REQUEST
 import com.vaibhav.util.Constants.TYPE_GAME_MOVE
@@ -48,7 +48,7 @@ fun Route.gameSocketRoute() {
                     room?.handleMoveReceivedFromPlayer(payload.position, clientId)
                 }
                 is DisconnectRequest -> {
-                    socketConnection.playerLeft(clientId)
+
                 }
             }
         }
